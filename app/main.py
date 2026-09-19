@@ -40,10 +40,16 @@ PORT = int(os.environ.get("PORT", "8000"))
 
 engine = Engine(DATA_ROOT, review_store_path=REVIEWS_PATH)
 
+RESULTS_CACHE = os.environ.get("SDOC_RESULTS_CACHE",
+                                str(Path(__file__).resolve().parent / "data" / "results_cache.json"))
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    engine.load().process_all()   # ~seconds for 520 emails; done once
+    engine.load()
+    if not engine.load_results_cache(RESULTS_CACHE):
+        engine.process_all()
+        engine.dump_results_cache(RESULTS_CACHE)
     print(f"engine ready: {engine.summary()}")
     yield
 

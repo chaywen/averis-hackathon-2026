@@ -177,6 +177,27 @@ class Engine:
     # ------------------------------------------------------------------
     # outputs
     # ------------------------------------------------------------------
+
+    def dump_results_cache(self, path: str):
+        """Serialize processed results to disk so a later startup can skip
+        reprocessing (esp. OCR-heavy PDFs)."""
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        raw = {eid: {**asdict(r), "comparisons": [asdict(c) for c in (r.comparisons or [])] or None}
+            for eid, r in self.results.items()}
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(raw, f)
+
+    def load_results_cache(self, path: str) -> bool:
+            """Load pre-baked results if present. Returns True if it loaded."""
+            if not path or not os.path.exists(path):
+                return False
+            with open(path, encoding="utf-8") as f:
+                raw = json.load(f)
+            for eid, r in raw.items():
+                comps = [FieldComparison(**c) for c in (r.pop("comparisons") or [])] or None
+                self.results[eid] = EmailResult(comparisons=comps, **r)
+            return True
+
     def submission(self) -> dict[str, dict]:
         return {eid: r.to_submission() for eid, r in self.results.items()}
 

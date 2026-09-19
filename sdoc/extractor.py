@@ -32,6 +32,23 @@ COMPARE_FIELDS = ["shipper", "consignee", "notify_party", "port_of_loading",
                   "port_of_discharge", "container_count", "gross_weight_kg"]
 
 NAME_FIELDS = {"shipper", "consignee", "notify_party"}
+_COMPANY_SUFFIX_RE = re.compile(
+    r"\b(LTD|LIMITED|INC|CO\.?|CORP|GMBH|LLC|PLC)\b\.?", re.I)
+_ADDRESS_KEYWORD_RE = re.compile(
+    r"\b(ROAD|STREET|AVENUE|FLOOR|NO\.|UNIT|BLOCK|SUITE)\b", re.I)
+
+
+def _split_name_from_address(value: str) -> str:
+    """collapse_lines can merge a company name with the address line that
+    follows it. Cut right after a recognized company suffix; if none,
+    cut right before a recognized address keyword."""
+    m = _COMPANY_SUFFIX_RE.search(value)
+    if m:
+        return value[:m.end()].strip().rstrip(",")
+    m = _ADDRESS_KEYWORD_RE.search(value)
+    if m:
+        return value[:m.start()].strip().rstrip(",")
+    return value
 
 EXTRACTABLE_EXTS = {".txt", ".pdf", ".xlsx", ".docx"}
 
@@ -60,7 +77,13 @@ def parse_fields(text: str) -> dict[str, str]:
         field, rest = _match_label(up)
         if not field:
             continue
-        fields[field] = line[len(line) - len(rest):].lstrip(": ").strip()
+        field, rest = _match_label(up)
+        if not field:
+            continue
+        val = line[len(line) - len(rest):].lstrip(": ").strip()
+        if field in NAME_FIELDS:
+            val = _split_name_from_address(val)
+        fields[field] = val
     return fields
 
 
