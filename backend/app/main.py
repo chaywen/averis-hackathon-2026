@@ -9,8 +9,7 @@ uvicorn app.main:app --reload --port 8000
 
 Interactive docs: http://localhost:8000/docs
 """
-from **future** import annotations
-
+from __future__ import annotations
 import logging
 from pathlib import Path
 
