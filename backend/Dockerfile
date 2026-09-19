@@ -11,15 +11,15 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# libGL / libglib are required by opencv, which rapidocr-onnxruntime pulls in
-# for the OCR rung of the PDF reader ladder.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    DATA_SOURCE=/app/data \
+    OCR_ENABLED=0
 
 COPY backend/requirements.txt /app/requirements.txt
 
@@ -33,16 +33,12 @@ COPY sdoc-hackathon-bundle/ /bundle/
 RUN python scripts/prepare_data.py
 
 # Pre-compute all email reports during Docker build.
-# This prevents Render startup from processing 520 emails and
-# running heavy document extraction.
+# This prevents Render startup from processing 520 emails.
 RUN python scripts/precompute_reports.py
 
-# The source bundle is no longer needed after the dataset has
-# been copied into /app/data.
+# The source bundle is no longer needed after the dataset
+# has been copied into /app/data and reports have been generated.
 RUN rm -rf /bundle
-
-# Runtime dataset location.
-ENV DATA_SOURCE=/app/data
 
 EXPOSE 8000
 
